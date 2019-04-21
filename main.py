@@ -1,31 +1,50 @@
 import pandas as pd
 
-import sklearn
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Imputer
+from sklearn.metrics import accuracy_score
 
-
-def apply_logistic_regressor():
+def get_predictions():
     train = pd.read_csv('https://drive.google.com/uc?export=download&id=1u56FcuG2C_TgzPRM-J7BRdMgJUPJkjBB')
-    test = pd.read_csv('https://drive.google.com/uc?export=download&id=12GTFLUmJQ8v9tW4AXcLEHBDjZNtobiuW')
 
-    train_clean = train[['Pclass', 'Age', 'Survived']]
-    train_clean = train_clean.fillna(0)
-    # train_clean = train_clean.dropna()
-    X_train = train_clean[['Pclass', 'Age']]
-    Y_train = train_clean[['Survived']]
+    y = train.Survived
+    x = train.drop('Survived', axis=1)
 
-    test_clean = test[['PassengerId', 'Pclass', 'Age']]
-    test_clean = test_clean.fillna(0)
-    # test_clean = test_clean.dropna()
-    X_test = test_clean[['Pclass', 'Age']]
+    x = pd.get_dummies(x)
 
-    logreg = LogisticRegression()
-    logreg.fit(X_train, Y_train)
-    Y_pred = logreg.predict(X_test)
+    train_x, test_x, train_y, test_y = train_test_split(x, y)
+    # print(train_x.shape)
+    # print(train_y.shape)
 
-    submission = pd.DataFrame(data=Y_pred, index=test_clean.PassengerId, columns=['Survived'])
+    pipeline = make_pipeline(Imputer(), LogisticRegression())
+    pipeline.fit(train_x, train_y)
+    predictions = pipeline.predict(test_x)
+
+    print(accuracy_score(test_y, predictions, normalize=True))
+
+
+def get_submission():
+    train = pd.read_csv('https://drive.google.com/uc?export=download&id=1u56FcuG2C_TgzPRM-J7BRdMgJUPJkjBB')
+
+    train_y = train.Survived
+    train_x = train.drop('Survived', axis=1)
+    train_x = pd.get_dummies(train_x)
+
+    test_x = pd.read_csv('https://drive.google.com/uc?export=download&id=12GTFLUmJQ8v9tW4AXcLEHBDjZNtobiuW')
+    test_x = pd.get_dummies(test_x)
+
+    train_x, test_x = train_x.align(test_x, join='left', axis=1)
+
+    pipeline = make_pipeline(Imputer(), LogisticRegression())
+    pipeline.fit(train_x, train_y)
+    predictions = pipeline.predict(test_x)
+
+    submission = pd.DataFrame(data=predictions, index=test_x.PassengerId, columns=['Survived'])
     submission.to_csv('titanic_submission')
 
 
 if __name__ == '__main__':
-    apply_logistic_regressor()
+    # get_predictions()
+    get_submission()
